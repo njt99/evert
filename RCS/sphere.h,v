@@ -1,0 +1,32 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+1.1
+date	93.12.17.20.04.55;	author munzner;	state Exp;
+branches;
+next	;
+
+
+desc
+@njt's changes checked in by munzner
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@#include "twojetvec.h"
+#include "threejetvec.h"
+TwoJetVec Corrugate(ThreeJet u, ThreeJet v, double t);
+TwoJetVec PushThrough(ThreeJet u, ThreeJet v, double t);
+TwoJetVec Twist(ThreeJet u, ThreeJet v, double t);
+TwoJetVec UnPush(ThreeJet u, ThreeJet v, double t);
+TwoJetVec UnCorrugate(ThreeJet u, ThreeJet v, double t);
+TwoJetVec BendIn(ThreeJet u, ThreeJet v, double t);
+@

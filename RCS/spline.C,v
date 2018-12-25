@@ -1,0 +1,735 @@
+head	2.5;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+2.5
+date	95.09.18.23.23.27;	author slevy;	state Exp;
+branches;
+next	2.4;
+
+2.4
+date	95.09.17.22.15.43;	author slevy;	state Exp;
+branches;
+next	2.3;
+
+2.3
+date	95.07.31.19.56.00;	author levy;	state Exp;
+branches;
+next	2.2;
+
+2.2
+date	93.12.17.20.31.18;	author munzner;	state Exp;
+branches;
+next	2.1;
+
+2.1
+date	93.12.17.20.23.29;	author njt;	state Exp;
+branches;
+next	2.0;
+
+2.0
+date	93.02.21.22.50.39;	author njt;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	93.02.21.06.02.26;	author njt;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	93.02.21.01.43.12;	author njt;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+2.5
+log
+@In non-Bezier case, write out plain MESH rather than QUADs.
+It's faster to compute & display, as we mention each vertex only once.
+Interpret -whole and -parts options: if present, wrap fundamental-domain
+in INST which replicates it appropriately.
+Try to handle degeneracies: if dP/dv == 0, nudge slightly in u.
+Not perfect but at least the user doesn't have to know.
+Adjust du, dv so that each is an exact submultiple of the
+u- or v-range.  This avoids bogus slivers at the edge of the range.
+Also it means we can e.g. have umin > umax to produce output
+with reversed orientation, e.g. so back-face culling can distinguish
+inside from outside.
+@
+text
+@#include "spline.h"
+#include "evert.h"
+extern "C" {
+#include <math.h>
+}
+
+extern int bezier;
+extern char *parts;
+extern int n_strips;
+
+void print_point (FILE *fp, TwoJetVec p, double ps, double pus, double pvs, double puvs, int binary)
+{
+  if(bezier) {
+    float xyz[3];
+    xyz[0] = double(p.x)*ps + p.x.df_du()*pus/3. + p.x.df_dv()*pvs/3.
+             + p.x.d2f_dudv()*puvs/9.;
+    xyz[1] = double(p.y)*ps + p.y.df_du()*pus/3. + p.y.df_dv()*pvs/3.
+             + p.y.d2f_dudv()*puvs/9.;
+    xyz[2] = double(p.z)*ps + p.z.df_du()*pus/3. + p.z.df_dv()*pvs/3.
+             + p.z.d2f_dudv()*puvs/9.;
+    if (binary) {
+      fwrite(&xyz, sizeof(float), 3, fp);
+    } else {
+      fprintf(fp, "%g %g %g\n", xyz[0], xyz[1], xyz[2]);
+    }
+  }
+  else{
+    double x= double(p.x)*ps ;
+    double y= double(p.y)*ps ;
+    double z= double(p.z)*ps ;
+    double nx= p.y.df_du()*p.z.df_dv()-p.z.df_du()*p.y.df_dv();
+    double ny= p.z.df_du()*p.x.df_dv()-p.x.df_du()*p.z.df_dv();
+    double nz= p.x.df_du()*p.y.df_dv()-p.y.df_du()*p.x.df_dv();
+    double s = nx*nx + ny*ny + nz*nz;
+    if(s > 0) s = sqrt(1/s);
+    fprintf(fp, "%f %f %f    %f %f %f\n", x, y, z, nx*s, ny*s, nz*s);
+  }
+}
+
+void printMesh(FILE *fp, TwoJetVec p, int binary)
+{
+    double x= double(p.x) ;
+    double y= double(p.y) ;
+    double z= double(p.z) ;
+    double nx= p.y.df_du()*p.z.df_dv()-p.z.df_du()*p.y.df_dv();
+    double ny= p.z.df_du()*p.x.df_dv()-p.x.df_du()*p.z.df_dv();
+    double nz= p.x.df_du()*p.y.df_dv()-p.y.df_du()*p.x.df_dv();
+    double s = nx*nx + ny*ny + nz*nz;
+    if(s > 0) s = sqrt(1/s);
+    fprintf(fp, "%f %f %f    %f %f %f\n", x, y, z, nx*s, ny*s, nz*s);
+}
+
+void printSpline(FILE *fp, TwoJetVec v00, TwoJetVec v01,
+			   TwoJetVec v10, TwoJetVec v11,
+			   double us, double vs,
+			   double s0, double s1, double t0, double t1, int binary) {
+    if (bezier) {
+    print_point(fp, v00, 1, 0, 0, 0, binary);
+    print_point(fp, v00, 1, us, 0, 0, binary);
+    print_point(fp, v10, 1,-us, 0, 0, binary);
+    print_point(fp, v10, 1, 0, 0, 0, binary);
+  
+    print_point(fp, v00, 1, 0, vs, 0, binary);
+    print_point(fp, v00, 1, us, vs, us*vs, binary);
+    print_point(fp, v10, 1,-us, vs,-us*vs, binary);
+    print_point(fp, v10, 1, 0, vs, 0, binary);
+  
+    print_point(fp, v01, 1, 0,-vs, 0, binary);
+    print_point(fp, v01, 1, us,-vs,-us*vs, binary);
+    print_point(fp, v11, 1,-us,-vs, us*vs, binary);
+    print_point(fp, v11, 1, 0,-vs, 0, binary);
+  
+    print_point(fp, v01, 1, 0, 0, 0, binary);
+    print_point(fp, v01, 1, us, 0, 0, binary);
+    print_point(fp, v11, 1,-us, 0, 0, binary);
+    print_point(fp, v11, 1, 0, 0, 0, binary);
+  
+    if (binary) {
+      float sts[8] = {s0,t0, s1,t0, s0,t1, s1,t1};
+      fwrite(&sts, sizeof(float), 8, fp);
+    } else {
+      fprintf(fp, "%g %g  %g %g  %g %g  %g %g\n\n",
+  	s0,t0,  s1,t0,  s0,t1, s1,t1);
+    }
+  }
+  else {
+    print_point(fp, v00, 1, us, vs, us*vs, binary);
+    print_point(fp, v10, 1, us, vs, us*vs, binary);
+    print_point(fp, v11, 1, us, vs, us*vs, binary);
+    print_point(fp, v01, 1, us, vs, us*vs, binary);
+    if(!binary)
+	fputc('\n', fp);
+  }
+}
+
+static inline double sqr(double x) {
+  return x*x;
+}
+static inline double calcSpeedV(TwoJetVec v) {
+  return sqrt(sqr(v.x.df_dv()) + sqr(v.y.df_dv()) + sqr(v.z.df_dv()));
+}
+static inline double calcSpeedU(TwoJetVec v) {
+  return sqrt(sqr(v.x.df_du()) + sqr(v.y.df_du()) + sqr(v.z.df_du()));
+}
+
+#define	PART_POS 0x1
+#define	PART_NEG 0x2
+
+char *parse_parts(char *parts)
+{
+    /* Construct matrices to replicate standard unit (u=0..1, v=0..1) into
+     * complete sphere.
+     */
+    char *partlist = (char *)calloc(n_strips, sizeof(char));
+    char *cp, *ncp, sign;
+    int bits, j;
+
+    for(cp = parts; *cp; ) {
+	while((sign = *cp++) == ' ' || sign == ',')
+	    ;
+	if(sign == '+')
+	    bits = PART_POS;
+	else if(sign == '-')
+	    bits = PART_NEG;
+	else {
+	    bits = PART_POS|PART_NEG;
+	    cp--;
+	}
+	if(*cp == '*') {
+	    for(j = 0; j < n_strips; j++)
+		partlist[j] |= bits;
+	    cp++;
+	} else {
+	    j = strtol(cp, &ncp, 0);
+	    if(cp == ncp) {
+		fprintf(stderr,
+"evert -parts: expected string with alternating signs and strip numbers\n");
+		return NULL;
+	    }
+	    if(j < 0 || j >= n_strips) {
+		fprintf(stderr,
+"evert -parts: bad strip number %d; must be in range 0..%d\n", j, n_strips-1);
+		return NULL;
+	    }
+	    partlist[j] |= bits;
+	    cp = ncp;
+	}
+    }
+    return partlist;
+}
+
+void printScene(
+		SurfaceTimeFunction *func,
+		double umin, double umax, double adu,
+		double vmin, double vmax, double adv,
+		double t, int binary
+		) 
+     
+{
+  static TwoJetVec **values;
+  int j, k;
+  int jmax = (int) (fabs(umax-umin)/adu+.5);
+  int kmax = (int) (fabs(vmax-vmin)/adv+.5);
+  double u, v, du, dv;
+  FILE *fp = stdout;
+
+  if(jmax == 0) jmax = 1;
+  du = (umax-umin) / jmax;
+  if(kmax == 0) kmax = 1;
+  dv = (vmax-vmin) / kmax;
+  values = (TwoJetVec **) calloc(jmax+1, sizeof(TwoJetVec *));
+  double *speedv = (double *) calloc(jmax+1, sizeof(double));
+  double **speedu = (double **) calloc(jmax+1, sizeof(double *));
+  for (j = 0; j <= jmax; j++) {
+    u = umin + j*du;
+    values[j] = (TwoJetVec *) calloc(kmax+1, sizeof(TwoJetVec));
+    speedu[j] = (double *) calloc(kmax+1, sizeof(double));
+    speedv[j] = calcSpeedV((*func)(ThreeJet(u, 1, 0), ThreeJet(0, 0, 1), t));
+    if(speedv[j] == 0) {
+      /* Perturb a bit, hoping to avoid degeneracy */
+      u += (u<1) ? 1e-9 : -1e-9;
+      speedv[j] = calcSpeedV((*func)(ThreeJet(u, 1, 0), ThreeJet(0, 0, 1), t));
+    }
+    for (k = 0; k <= kmax; k++) {
+      v = vmin + k*dv;
+      values[j][k] = (*func)(
+       ThreeJet(u, 1, 0),
+       ThreeJet(v, 0, 1),
+       t
+      );
+      speedu[j][k] = calcSpeedU(values[j][k]);
+    }
+  }
+/*
+  fprintf(fp, "Declare \"speeds\" \"varying float\"\n");
+  fprintf(fp, "Declare \"speedt\" \"varying float\"\n");
+*/
+  if(parts != NULL) {
+    /* Construct matrices to replicate standard unit (u=0..1, v=0..1) into
+     * complete sphere.
+     */
+    char *partlist = parse_parts(parts);
+
+    if(partlist == NULL)
+	return;
+
+    fprintf(fp, "{ INST transforms { TLIST\n");
+    for(j = -1; j <= 1; j += 2) {
+	for(k = 0; k < n_strips; k++) {
+	  if(partlist[k] & (j<0 ? PART_NEG : PART_POS)) {
+	    double t = 2*M_PI * (j < 0 ? n_strips-1-k : k) / n_strips;
+	    double s = sin(t), c = cos(t);
+
+	    fprintf(fp, "# %c%d of %d\n", j<0 ? '-' : '+', k, n_strips);
+	    fprintf(fp, "\t%10f %10f %10f %10f\n", j*c, -s,	     0., 0.);
+	    fprintf(fp, "\t%10f %10f %10f %10f\n", j*s,  c,	     0., 0.);
+	    fprintf(fp, "\t%10f %10f %10f %10f\n", 0.,   0., (double)j, 0.);
+	    fprintf(fp, "\t%10f %10f %10f %10f\n", 0.,   0.,	     0., 1.);
+	  }
+	}
+    }
+    fprintf(fp, "}\ngeom ");
+  }
+
+  if(bezier) {
+    fprintf(fp, "{ STBBP%s\n", binary ? " BINARY" : "");
+    for (j = 0; j < jmax; j++) {
+      u = umin + j*du;
+      for (k = 0; k < kmax; k++) {
+	v = vmin + k*dv;
+	printSpline(fp, values[j][k], values[j][k+1],
+		  values[j+1][k], values[j+1][k+1],
+		  du, dv,
+		  umin+j*du, umin+(j+1)*du,  vmin+k*dv, vmin+(k+1)*dv, binary);
+      }
+    }
+  } 
+  else {
+    int nu = kmax+1, nv = jmax+1;
+    fprintf(fp, "{ NMESH%s\n", binary ? " BINARY" : "");
+
+    if(binary) {
+	fwrite(&nu, sizeof(int), 1, stdout);
+	fwrite(&nv, sizeof(int), 1, stdout);
+    } else {
+	fprintf(fp, "%d %d\n", nu, nv);
+    }
+    for(j = 0; j <= jmax; j++) {
+	for(k = 0; k <= kmax; k++)
+	    printMesh(fp, values[j][k], binary);
+	if(!binary)
+	    fputc('\n', fp);
+    }
+  }
+  if(parts)
+    fprintf(fp, " }\n");
+  fprintf(fp, "}\n");
+}
+
+void impossible(char *msg) {
+  fprintf(stderr, "%s\n", msg);
+  exit(1);
+}
+
+@
+
+
+2.4
+log
+@Emit NQUADs as one large object rather than a list of tiny ones.
+Normalize NQUAD normal-vectors.
+Write BINARY format properly (even though it can't yet be invoked).
+@
+text
+@d8 2
+d40 13
+d91 2
+a92 1
+    fputc('\n', fp);
+d106 46
+d154 2
+a155 2
+		double umin, double umax, double du,
+		double vmin, double vmax, double dv,
+d162 3
+a164 2
+  int jmax = (int) ((umax-umin)/du+1), kmax = (int) ((vmax-vmin)/dv+1);
+  double u, v;
+d167 4
+a175 1
+    if (u > umax) u = umax;
+d179 5
+a185 1
+      if (v > vmax) v = vmax;
+d198 27
+d227 10
+d239 3
+a241 1
+    fprintf(fp, "{ NQUAD%s\n", binary ? " BINARY" : "");
+d243 4
+a246 2
+	int total = jmax * kmax;
+	fwrite(&total, sizeof(int), 1, stdout);
+d248 5
+a252 11
+  }
+  for (j = 0; j < jmax; j++) {
+    u = umin + j*du;
+    double duscale = (j < jmax-1) ? du : (umax - u);
+    for (k = 0; k < kmax; k++) {
+      v = vmin + k*dv;
+      double dvscale = (k < kmax-1) ? dv : (vmax - v);
+      printSpline(fp, values[j][k], values[j][k+1],
+		  values[j+1][k], values[j+1][k+1],
+		  duscale, dvscale,
+		  umin+j*du, umin+(j+1)*du,  vmin+k*dv, vmin+(k+1)*dv, binary);
+d255 2
+@
+
+
+2.3
+log
+@Write both "speeds" and "speedt" rather than just "speed" parameters
+   (munzner).
+Allow writing NQUADs as well as Bezier patches (Silvio Levy).
+Also make it a generic program, not tied to Outside In development tree.
+@
+text
+@d12 2
+a13 1
+    double x = double(p.x)*ps + p.x.df_du()*pus/3. + p.x.df_dv()*pvs/3.
+d15 1
+a15 1
+    double y = double(p.y)*ps + p.y.df_du()*pus/3. + p.y.df_dv()*pvs/3.
+d17 1
+a17 1
+    double z = double(p.z)*ps + p.z.df_du()*pus/3. + p.z.df_dv()*pvs/3.
+d20 1
+a20 3
+      fwrite(&x, sizeof(double), 1, fp);
+      fwrite(&y, sizeof(double), 1, fp);
+      fwrite(&z, sizeof(double), 1, fp);
+d22 1
+a22 1
+      fprintf(fp, "%g %g %g\n", x, y, z);
+d32 3
+a34 1
+    fprintf(fp, "%f %f %f    %f %f %f\n", x, y, z, nx, ny, nz);
+d64 2
+a65 8
+      fwrite(&s0, sizeof(double), 1, fp);
+      fwrite(&t0, sizeof(double), 1, fp);
+      fwrite(&s1, sizeof(double), 1, fp);
+      fwrite(&t0, sizeof(double), 1, fp);
+      fwrite(&s0, sizeof(double), 1, fp);
+      fwrite(&t1, sizeof(double), 1, fp);
+      fwrite(&s1, sizeof(double), 1, fp);
+      fwrite(&t1, sizeof(double), 1, fp);
+a71 1
+    fprintf(fp, "{ = NQUAD\n");
+d76 1
+a76 1
+    fprintf(fp, "}\n");
+d129 1
+a129 1
+    fprintf(fp, "STBBP%s\n", binary ? " BINARY" : "");
+d132 5
+a136 1
+    fprintf(fp, "LIST\n");
+d150 1
+@
+
+
+2.2
+log
+@njt's version, prints out RIB with speed info.
+@
+text
+@d2 1
+a2 1
+#include "scene7.h"
+d7 3
+a9 1
+void print_point (FILE *fp, TwoJetVec p, double ps, double pus, double pvs, double puvs)
+d11 24
+a34 7
+  double x = double(p.x)*ps + p.x.df_du()*pus/3. + p.x.df_dv()*pvs/3.
+           + p.x.d2f_dudv()*puvs/9.;
+  double y = double(p.y)*ps + p.y.df_du()*pus/3. + p.y.df_dv()*pvs/3.
+           + p.y.d2f_dudv()*puvs/9.;
+  double z = double(p.z)*ps + p.z.df_du()*pus/3. + p.z.df_dv()*pvs/3.
+           + p.z.d2f_dudv()*puvs/9.;
+  fprintf(fp, "%f %f %f\n", x, y, z);
+d41 43
+a83 25
+  fprintf(fp, "Patch \"bicubic\"\n");
+  fprintf(fp, "\"P\" [\n");
+  print_point(fp, v00, 1, 0, 0, 0);
+  print_point(fp, v00, 1, us, 0, 0);
+  print_point(fp, v10, 1,-us, 0, 0);
+  print_point(fp, v10, 1, 0, 0, 0);
+
+  print_point(fp, v00, 1, 0, vs, 0);
+  print_point(fp, v00, 1, us, vs, us*vs);
+  print_point(fp, v10, 1,-us, vs,-us*vs);
+  print_point(fp, v10, 1, 0, vs, 0);
+
+  print_point(fp, v01, 1, 0,-vs, 0);
+  print_point(fp, v01, 1, us,-vs,-us*vs);
+  print_point(fp, v11, 1,-us,-vs, us*vs);
+  print_point(fp, v11, 1, 0,-vs, 0);
+
+  print_point(fp, v01, 1, 0, 0, 0);
+  print_point(fp, v01, 1, us, 0, 0);
+  print_point(fp, v11, 1,-us, 0, 0);
+  print_point(fp, v11, 1, 0, 0, 0);
+
+  fprintf(fp, "] \"st\" [\n");
+  fprintf(fp, "%f %f  %f %f  %f %f  %f %f\n", s0,t0,  s1,t0,  s0,t1, s1,t1);
+  fprintf(fp, "]\n");
+d89 1
+a89 1
+static inline double calcSpeed(TwoJetVec v) {
+d92 3
+d109 1
+a109 1
+  
+d111 2
+a112 1
+  double *speed = (double *) calloc(jmax+1, sizeof(double));
+d117 2
+a118 1
+    speed[j] = calcSpeed((*func)(ThreeJet(u, 1, 0), ThreeJet(0, 0, 1), t));
+d127 1
+d130 10
+a139 1
+  fprintf(fp, "Declare \"speed\" \"varying float\"\n");
+a149 2
+      fprintf(fp, "\"speed\" [%f %f %f %f]\n",
+       speed[j], speed[j+1], speed[j], speed[j+1]);
+@
+
+
+2.1
+log
+@These should be working
+@
+text
+@d7 1
+a7 1
+void print_point (FILE *fp, TwoJetVec p, double ps, double pus, double pvs, double puvs, int binary)
+d15 1
+a15 7
+  if (binary) {
+    fwrite(&x, sizeof(double), 1, fp);
+    fwrite(&y, sizeof(double), 1, fp);
+    fwrite(&z, sizeof(double), 1, fp);
+  } else {
+    fprintf(fp, "%g %g %g\n", x, y, z);
+  }
+d22 25
+a46 33
+  print_point(fp, v00, 1, 0, 0, 0, binary);
+  print_point(fp, v00, 1, us, 0, 0, binary);
+  print_point(fp, v10, 1,-us, 0, 0, binary);
+  print_point(fp, v10, 1, 0, 0, 0, binary);
+
+  print_point(fp, v00, 1, 0, vs, 0, binary);
+  print_point(fp, v00, 1, us, vs, us*vs, binary);
+  print_point(fp, v10, 1,-us, vs,-us*vs, binary);
+  print_point(fp, v10, 1, 0, vs, 0, binary);
+
+  print_point(fp, v01, 1, 0,-vs, 0, binary);
+  print_point(fp, v01, 1, us,-vs,-us*vs, binary);
+  print_point(fp, v11, 1,-us,-vs, us*vs, binary);
+  print_point(fp, v11, 1, 0,-vs, 0, binary);
+
+  print_point(fp, v01, 1, 0, 0, 0, binary);
+  print_point(fp, v01, 1, us, 0, 0, binary);
+  print_point(fp, v11, 1,-us, 0, 0, binary);
+  print_point(fp, v11, 1, 0, 0, 0, binary);
+
+  if (binary) {
+    fwrite(&s0, sizeof(double), 1, fp);
+    fwrite(&t0, sizeof(double), 1, fp);
+    fwrite(&s1, sizeof(double), 1, fp);
+    fwrite(&t0, sizeof(double), 1, fp);
+    fwrite(&s0, sizeof(double), 1, fp);
+    fwrite(&t1, sizeof(double), 1, fp);
+    fwrite(&s1, sizeof(double), 1, fp);
+    fwrite(&t1, sizeof(double), 1, fp);
+  } else {
+    fprintf(fp, "%g %g  %g %g  %g %g  %g %g\n\n",
+	s0,t0,  s1,t0,  s0,t1, s1,t1);
+  }
+d49 6
+d71 1
+d76 1
+d87 1
+a87 1
+  fprintf(fp, "STBBP%s\n", binary ? " BINARY" : "");
+d98 2
+@
+
+
+2.0
+log
+@Working version
+@
+text
+@d7 1
+a7 1
+void print_point (FILE *fp, TwoJetVec p, int ps, int pus, int pvs, int puvs, int binary)
+d9 1
+a9 1
+  float x = double(p.x)*ps + p.x.df_du()*pus/3. + p.x.df_dv()*pvs/3.
+d11 1
+a11 1
+  float y = double(p.y)*ps + p.y.df_du()*pus/3. + p.y.df_dv()*pvs/3.
+d13 1
+a13 1
+  float z = double(p.z)*ps + p.z.df_du()*pus/3. + p.z.df_dv()*pvs/3.
+d16 3
+a18 3
+    fwrite(&x, sizeof(float), 1, fp);
+    fwrite(&y, sizeof(float), 1, fp);
+    fwrite(&z, sizeof(float), 1, fp);
+d26 2
+a27 1
+			   double s0, double ds, double t0, double dt, int binary) {
+d29 2
+a30 2
+  print_point(fp, v00, 1, 1, 0, 0, binary);
+  print_point(fp, v10, 1,-1, 0, 0, binary);
+d33 9
+a41 9
+  print_point(fp, v00, 1, 0, 1, 0, binary);
+  print_point(fp, v00, 1, 1, 1, 1, binary);
+  print_point(fp, v10, 1,-1, 1,-1, binary);
+  print_point(fp, v10, 1, 0, 1, 0, binary);
+
+  print_point(fp, v01, 1, 0,-1, 0, binary);
+  print_point(fp, v01, 1, 1,-1,-1, binary);
+  print_point(fp, v11, 1,-1,-1, 1, binary);
+  print_point(fp, v11, 1, 0,-1, 0, binary);
+d44 2
+a45 2
+  print_point(fp, v01, 1, 1, 0, 0, binary);
+  print_point(fp, v11, 1,-1, 0, 0, binary);
+d49 8
+a56 12
+    float ss0 = s0;
+    float tt0 = t0;
+    float ss1 = s0+ds;
+    float tt1 = t0+dt;
+    fwrite(&ss0, sizeof(float), 1, fp);
+    fwrite(&tt0, sizeof(float), 1, fp);
+    fwrite(&ss1, sizeof(float), 1, fp);
+    fwrite(&tt0, sizeof(float), 1, fp);
+    fwrite(&ss0, sizeof(float), 1, fp);
+    fwrite(&tt1, sizeof(float), 1, fp);
+    fwrite(&ss1, sizeof(float), 1, fp);
+    fwrite(&tt1, sizeof(float), 1, fp);
+d59 1
+a59 1
+	s0,t0,  s0+ds,t0,  s0,t0+dt, s0+ds,t0+dt);
+d66 2
+a67 2
+		double umin, double umax, int jmax,
+		double vmin, double vmax, int kmax,
+d74 2
+a75 2
+  double du = (umax-umin) / jmax;
+  double dv = (vmax-vmin) / kmax;
+d80 2
+d84 2
+d87 2
+a88 2
+       ThreeJet(umin + j*du, du, 0),
+       ThreeJet(vmin + k*dv, 0, dv),
+d95 2
+d98 2
+d102 2
+a103 1
+		  umin+j*du, du,  vmin+k*dv, dv, binary);
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d7 1
+a7 1
+void print_point (FILE *fp, ThreeJetVec p, int ps, int pus, int pvs, int puvs)
+d9 13
+a21 7
+  fprintf(fp, "%g %g %g\n",
+   double(p.x)*ps + double(D(p.x,0))*pus/3. + double(D(p.x,1))*pvs/3.
+ + double(D(D(p.x,0),1))*puvs/9.,
+   double(p.y)*ps + double(D(p.y,0))*pus/3. + double(D(p.y,1))*pvs/3.
+ + double(D(D(p.y,0),1))*puvs/9.,
+   double(p.z)*ps + double(D(p.z,0))*pus/3. + double(D(p.z,1))*pvs/3.
+ + double(D(D(p.z,0),1))*puvs/9.);
+d24 38
+a61 24
+void printSpline(FILE *fp, ThreeJetVec v00, ThreeJetVec v01,
+			   ThreeJetVec v10, ThreeJetVec v11,
+			   double s0, double ds, double t0, double dt) {
+  print_point(fp, v00, 1, 0, 0, 0);
+  print_point(fp, v00, 1, 1, 0, 0);
+  print_point(fp, v10, 1,-1, 0, 0);
+  print_point(fp, v10, 1, 0, 0, 0);
+
+  print_point(fp, v00, 1, 0, 1, 0);
+  print_point(fp, v00, 1, 1, 1, 1);
+  print_point(fp, v10, 1,-1, 1,-1);
+  print_point(fp, v10, 1, 0, 1, 0);
+
+  print_point(fp, v01, 1, 0,-1, 0);
+  print_point(fp, v01, 1, 1,-1,-1);
+  print_point(fp, v11, 1,-1,-1, 1);
+  print_point(fp, v11, 1, 0,-1, 0);
+
+  print_point(fp, v01, 1, 0, 0, 0);
+  print_point(fp, v01, 1, 1, 0, 0);
+  print_point(fp, v11, 1,-1, 0, 0);
+  print_point(fp, v11, 1, 0, 0, 0);
+
+  fprintf(fp, "%g %g  %g %g  %g %g  %g %g\n\n",
+d63 1
+d71 1
+a71 1
+		double t		 
+d75 1
+a75 1
+  static ThreeJetVec **values;
+d81 1
+a81 1
+  values = (ThreeJetVec **) calloc(jmax+1, sizeof(ThreeJetVec *));
+d83 1
+a83 1
+    values[j] = (ThreeJetVec *) calloc(kmax+1, sizeof(ThreeJetVec));
+d88 1
+a88 1
+       ThreeJet(t, 0, 0)
+d92 1
+a92 1
+  fprintf(fp, "STBBP\n");
+d97 1
+a97 1
+		  umin+j*du, du,  vmin+k*dv, dv);
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d60 1
+a60 1
+  values = calloc(jmax+1, sizeof(ThreeJetVec *));
+d62 1
+a62 1
+    values[j] = calloc(kmax+1, sizeof(ThreeJetVec));
+@

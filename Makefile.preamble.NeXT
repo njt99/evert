@@ -1,0 +1,6 @@
+CC=cc
+CFLAGS= -arch m68k -arch i386 -arch hppa 
+LIBS = -lm
+
+
+

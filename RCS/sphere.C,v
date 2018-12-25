@@ -1,0 +1,391 @@
+head	2.1;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+2.1
+date	93.12.17.20.23.29;	author njt;	state Exp;
+branches;
+next	2.0;
+
+2.0
+date	93.02.21.22.50.39;	author njt;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	93.02.21.06.02.26;	author njt;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	93.02.21.01.43.12;	author njt;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+2.1
+log
+@These should be working
+@
+text
+@#include "threejetvec.h"
+#include "figureeight.h"
+#include "spline.h"
+#include "sphere.h"
+
+ThreeJetVec Arc(ThreeJet u, ThreeJet v, double xsize, double ysize, double zsize) {
+  ThreeJetVec result;
+  u = u*0.25;
+  result.x = Sin (u) * Sin (v) * xsize;
+  result.y = Sin (u) * Cos (v) * ysize;
+  result.z = Cos (u) * zsize;
+  return result;
+}
+
+ThreeJetVec Straight(ThreeJet u, ThreeJet v, double xsize, double ysize, double zsize) {
+  ThreeJetVec result;
+  u = u*0.25;
+#if 0
+  u = (u) * (-0.15915494) + 1; /* 1/2pi */
+#endif
+  result.x = Sin (v) * xsize;
+  result.y = Cos (v) * ysize;
+  result.z = Cos (u) * zsize;
+  return result;
+}
+
+ThreeJet Param1(ThreeJet x) {
+  double offset = 0;
+  x %= 4;
+  if (x > 2) { x = x+(-2); offset = 2; }
+  if (x <= 1) return x*2 + (x^2)*(-1) + offset;
+  else return (x^2) + x*(-2) + (2 + offset);
+}
+
+ThreeJet Param2(ThreeJet x) {
+  double offset = 0;
+  x %= 4;
+  if (x > 2) { x = x+(-2); offset = 2; }
+  if (x <= 1) return (x^2) + offset;
+  else return (x^2)*(-1) + x*4 + (-2 + offset);
+}
+
+static inline ThreeJet TInterp(double x) {
+  return ThreeJet(x,0,0);
+}
+
+ThreeJet UInterp(ThreeJet x) {
+  x %= 2;
+  if (x > 1)
+    x = x*(-1) + 2;
+  return (x^2)*3 + (x^3) * (-2);
+}
+
+#define FFPOW 3
+ThreeJet FFInterp(ThreeJet x) {
+  x %= 2;
+  if (x > 1)
+    x = x*(-1) + 2;
+  x = x*1.06 + -0.05;
+  if (x < 0) return ThreeJet(0, 0, 0);
+  else if (x > 1) return ThreeJet(0, 0, 0) + 1;
+  else return (x ^ (FFPOW-1)) * (FFPOW) + (x^FFPOW) * (-FFPOW+1);
+}
+
+#define FSPOW 3
+ThreeJet FSInterp(ThreeJet x) {
+  x %= 2;
+  if (x > 1)
+    x = x*(-1) + 2;
+  return ((x ^ (FSPOW-1)) * (FSPOW) + (x^FSPOW) * (-FSPOW+1)) * (-0.2);
+}
+
+ThreeJetVec Stage0(ThreeJet u, ThreeJet v) {
+  return Straight(u, v, 1, 1, 1);
+}
+
+ThreeJetVec Stage1(ThreeJet u, ThreeJet v) {
+  return Arc(u, v, 1, 1, 1);
+}
+
+ThreeJetVec Stage2(ThreeJet u, ThreeJet v) {
+  return InterpolateVec(
+    Arc(Param1(u), v, 0.9, 0.9, -1),
+    Arc(Param2(u), v, 1, 1, 0.5), 
+    UInterp(u));
+}
+
+ThreeJetVec Stage3(ThreeJet u, ThreeJet v) {
+  return InterpolateVec(
+    Arc(Param1(u), v,-0.9,-0.9,-1), 
+    Arc(Param2(u), v,-1, 1,-0.5),
+    UInterp(u));
+}
+
+ThreeJetVec Stage4(ThreeJet u, ThreeJet v) {
+  return Arc(u, v, -1,-1, -1);
+}
+
+ThreeJetVec Scene01(ThreeJet u, ThreeJet v, double t) {
+  return InterpolateVec(Stage0(u,v), Stage1(u,v), TInterp(t));
+}
+
+ThreeJetVec Scene12(ThreeJet u, ThreeJet v, double t) {
+  return InterpolateVec(Stage1(u,v), Stage2(u,v), TInterp(t));
+}
+
+ThreeJetVec Scene23(ThreeJet u, ThreeJet v, double t) {
+  t = TInterp(t) * 0.5;
+  double tt = (u <= 1) ? t : -t;
+  return InterpolateVec(
+    RotateZ(Arc(Param1(u), v, 0.9, 0.9,-1), ThreeJet(tt,0,0)),
+    RotateY(Arc(Param2(u), v, 1, 1, 0.5), ThreeJet(t,0,0)),
+    UInterp(u)
+  );
+}
+
+ThreeJetVec Scene34(ThreeJet u, ThreeJet v, double t) {
+  return InterpolateVec(Stage3(u,v), Stage4(u,v), TInterp(t));
+}
+
+TwoJetVec BendIn(ThreeJet u, ThreeJet v, double t) {
+  t = TInterp(t);
+  return AddFigureEight(
+    Scene01(u, ThreeJet(0, 0, 1), t),
+    u, v, ThreeJet(0, 0, 0), FSInterp(u));
+}
+TwoJetVec Corrugate(ThreeJet u, ThreeJet v, double t) {
+  t = TInterp(t);
+  return AddFigureEight(
+    Stage1(u, ThreeJet(0, 0, 1)),
+    u, v, FFInterp(u) * ThreeJet(t,0,0), FSInterp(u));
+}
+TwoJetVec PushThrough(ThreeJet u, ThreeJet v, double t) {
+  return AddFigureEight(
+    Scene12(u,ThreeJet(0, 0, 1),t),
+    u, v, FFInterp(u), FSInterp(u));
+}
+TwoJetVec Twist(ThreeJet u, ThreeJet v, double t) {
+  return AddFigureEight(
+    Scene23(u,ThreeJet(0, 0, 1),t),
+    u, v, FFInterp(u), FSInterp(u));
+}
+
+TwoJetVec UnPush(ThreeJet u, ThreeJet v, double t) {
+  return AddFigureEight(
+    Scene34(u,ThreeJet(0, 0, 1),t),
+    u, v, FFInterp(u), FSInterp(u));
+}
+
+TwoJetVec UnCorrugate(ThreeJet u, ThreeJet v, double t) {
+  t = TInterp((t) * (-1) + 1);
+  return AddFigureEight(
+    Stage4(u,ThreeJet(0, 0, 1)),
+    u, v, FFInterp(u) * ThreeJet(t,0,0), FSInterp(u));
+}
+@
+
+
+2.0
+log
+@Working version
+@
+text
+@d4 1
+a5 7
+TwoJetVec Corrugate(ThreeJet u, ThreeJet v, double t);
+TwoJetVec PushThrough(ThreeJet u, ThreeJet v, double t);
+TwoJetVec Twist(ThreeJet u, ThreeJet v, double t);
+TwoJetVec UnPush(ThreeJet u, ThreeJet v, double t);
+TwoJetVec UnCorrugate(ThreeJet u, ThreeJet v, double t);
+ThreeJetVec Scene(ThreeJet u, ThreeJet v, double t);
+
+d28 5
+a32 1
+  return x*2 + (x*x) * (-1);
+d36 5
+a40 1
+  return x^2;
+d48 3
+d56 3
+d61 1
+a61 1
+  else if (x > 1) return ThreeJet(1, 0, 0);
+d65 1
+d67 4
+a70 1
+  return (x^2*3 + (x^3) * (-2)) * (-0.2);
+d109 1
+d111 1
+a111 1
+    RotateZ(Arc(Param1(u), v, 0.9, 0.9,-1), ThreeJet(t,0,0)),
+a120 11
+ThreeJetVec Scene(ThreeJet u, ThreeJet v, double t) {
+  t = t*3;
+  if (t >= 0 && t <= 1) return Scene12(u, v, t);
+  else if (t <= 2) return Scene23(u, v, t + -1);
+  else if (t <= 3) return Scene34(u, v, t + -2);
+  else {
+    impossible("time out of range");
+    return Scene12(u,v,t);
+  }
+}
+
+a154 17
+}
+
+/* now obsolete: the subscenes are called directly from scene7.c */
+
+TwoJetVec BScene(ThreeJet u, ThreeJet v, double t) {
+  t = t*15;
+  if (t >= 0 && t <= 2) return Corrugate(u, v, t*(1/2.));
+  else if (t <= 5) return PushThrough(u, v, (t + -2) * (1/3.));
+
+  else if (t <= 10) return Twist(u, v, (t + -5) * (1/5.));
+
+  else if (t <= 14) return UnPush(u, v, (t + -10) * (1/4.));
+  else if (t <= 15) return UnCorrugate(u, v, t + -14);
+  else {
+    impossible("time out of range");
+    return Corrugate(u, v, ThreeJet(0, 0, 0));
+  }
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d5 6
+a10 6
+ThreeJetVec Corrugate(ThreeJet u, ThreeJet v, ThreeJet t);
+ThreeJetVec PushThrough(ThreeJet u, ThreeJet v, ThreeJet t);
+ThreeJetVec Twist(ThreeJet u, ThreeJet v, ThreeJet t);
+ThreeJetVec UnPush(ThreeJet u, ThreeJet v, ThreeJet t);
+ThreeJetVec UnCorrugate(ThreeJet u, ThreeJet v, ThreeJet t);
+ThreeJetVec Scene(ThreeJet u, ThreeJet v, ThreeJet t);
+d14 4
+a17 4
+  u = Multiply(u, 0.25);
+  result.x = Multiply(Times(Sin(u), Sin(v)), xsize);
+  result.y = Multiply(Times(Sin(u), Cos(v)), ysize);
+  result.z = Multiply(Cos(u), zsize);
+d23 1
+a23 1
+  u = Multiply(u, 0.25);
+d25 1
+a25 1
+  u = Add(Multiply(u, -0.15915494),1); /* 1/2pi */
+d27 3
+a29 3
+  result.x = Multiply(Sin(v), xsize);
+  result.y = Multiply(Cos(v), ysize);
+  result.z = Multiply(Cos(u), zsize);
+d34 1
+a34 1
+  return Plus(Multiply(x, 2), Multiply(Times(x,x), -1));
+d38 1
+a38 1
+  return Power(x,2);
+d41 2
+a42 5
+ThreeJet TInterp(ThreeJet x) {
+  /*
+  return Plus(Multiply(Power(x,2), 3), Multiply(Power(x,3),-2));
+  */
+  return x;
+d46 1
+a46 1
+  return Plus(Multiply(Power(x,2), 3), Multiply(Power(x,3),-2));
+d51 1
+a51 1
+  x = Add(Multiply(x, 1.06),-0.05);
+d54 1
+a54 1
+  else return Plus(Multiply(Power(x,FFPOW-1), FFPOW), Multiply(Power(x,FFPOW),-FFPOW+1));
+d58 1
+a58 1
+  return Multiply(Plus(Multiply(Power(x,2), 3), Multiply(Power(x,3),-2)), -0.2);
+d87 1
+a87 1
+ThreeJetVec Scene01(ThreeJet u, ThreeJet v, ThreeJet t) {
+d91 1
+a91 1
+ThreeJetVec Scene12(ThreeJet u, ThreeJet v, ThreeJet t) {
+d95 2
+a96 2
+ThreeJetVec Scene23(ThreeJet u, ThreeJet v, ThreeJet t) {
+  t = Multiply(TInterp(t), 0.5);
+d98 2
+a99 2
+    RotateZ(Arc(Param1(u), v, 0.9, 0.9,-1), t),
+    RotateY(Arc(Param2(u), v, 1, 1, 0.5), t),
+d104 1
+a104 1
+ThreeJetVec Scene34(ThreeJet u, ThreeJet v, ThreeJet t) {
+d108 2
+a109 2
+ThreeJetVec Scene(ThreeJet u, ThreeJet v, ThreeJet t) {
+  t = Multiply(t, 3);
+d111 2
+a112 2
+  else if (t <= 2) return Scene23(u, v, Add(t, -1));
+  else if (t <= 3) return Scene34(u, v, Add(t, -2));
+d115 1
+a115 1
+    return Corrugate(u, v, ThreeJet(0, 0, 0));
+d119 1
+a119 1
+ThreeJetVec BendIn(ThreeJet u, ThreeJet v, ThreeJet t) {
+d125 1
+a125 1
+ThreeJetVec Corrugate(ThreeJet u, ThreeJet v, ThreeJet t) {
+d129 1
+a129 1
+    u, v, Times(FFInterp(u), t), FSInterp(u));
+d131 1
+a131 1
+ThreeJetVec PushThrough(ThreeJet u, ThreeJet v, ThreeJet t) {
+d136 1
+a136 1
+ThreeJetVec Twist(ThreeJet u, ThreeJet v, ThreeJet t) {
+d142 1
+a142 1
+ThreeJetVec UnPush(ThreeJet u, ThreeJet v, ThreeJet t) {
+d148 2
+a149 2
+ThreeJetVec UnCorrugate(ThreeJet u, ThreeJet v, ThreeJet t) {
+  t = TInterp(Add(Multiply(t,-1),1));
+d152 1
+a152 1
+    u, v, Times(FFInterp(u),t), FSInterp(u));
+d157 4
+a160 4
+ThreeJetVec BScene(ThreeJet u, ThreeJet v, ThreeJet t) {
+  t = Multiply(t, 15);
+  if (t >= 0 && t <= 2) return Corrugate(u, v, Multiply(t, 1/2.));
+  else if (t <= 5) return PushThrough(u, v, Multiply(Add(t, -2), 1/3.));
+d162 1
+a162 1
+  else if (t <= 10) return Twist(u, v, Multiply(Add(t, -5), 1/5.));
+d164 2
+a165 2
+  else if (t <= 14) return UnPush(u, v, Multiply(Add(t, -10),1/4.));
+  else if (t <= 15) return UnCorrugate(u, v, Add(t, -14));
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@

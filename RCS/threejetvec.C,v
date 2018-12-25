@@ -1,0 +1,232 @@
+head	2.0;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+2.0
+date	93.02.21.22.50.39;	author njt;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	93.02.21.06.02.26;	author njt;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	93.02.21.01.43.12;	author njt;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+2.0
+log
+@Working version
+@
+text
+@#include "threejetvec.h"
+ThreeJetVec operator+(ThreeJetVec v, ThreeJetVec w) {
+  ThreeJetVec result;
+  result.x = v.x + w.x;
+  result.y = v.y + w.y;
+  result.z = v.z + w.z;
+  return result;
+}
+
+ThreeJetVec operator*(ThreeJetVec v, ThreeJet  a) {
+  ThreeJetVec result;
+  result.x = v.x*a;
+  result.y = v.y*a;
+  result.z = v.z*a;
+  return result;
+}
+
+ThreeJetVec operator*(ThreeJetVec v, double a) {
+  ThreeJetVec result;
+  result.x = v.x*a;
+  result.y = v.y*a;
+  result.z = v.z*a;
+  return result;
+}
+
+ThreeJetVec AnnihilateVec(ThreeJetVec v, int index) {
+  ThreeJetVec result;
+  result.x = Annihilate(v.x, index);
+  result.y = Annihilate(v.y, index);
+  result.z = Annihilate(v.z, index);
+  return result;
+}
+
+TwoJetVec D(ThreeJetVec x, int index) {
+  TwoJetVec result;
+  result.x = D(x.x, index);
+  result.y = D(x.y, index);
+  result.z = D(x.z, index);
+  return result;
+}
+
+ThreeJetVec Cross(ThreeJetVec v, ThreeJetVec w) {
+  ThreeJetVec result;
+  result.x = v.y*w.z + v.z*w.y*-1;
+  result.y = v.z*w.x + v.x*w.z*-1;
+  result.z = v.x*w.y + v.y*w.x*-1;
+  return result;
+}
+
+ThreeJet Dot(ThreeJetVec v, ThreeJetVec w) {
+  return v.x*w.x + v.y*w.y + v.z*w.z;
+}
+
+ThreeJetVec Normalize(ThreeJetVec v) {
+  ThreeJet a;
+  a = Dot(v,v);
+  if (a > 0)
+    a = a^-0.5;
+  else
+    a = ThreeJet(0, 0, 0);
+  return v*a;
+}
+
+ThreeJetVec RotateZ(ThreeJetVec v, ThreeJet angle) {
+  ThreeJetVec result;
+  ThreeJet s,c;
+  s = Sin (angle);
+  c = Cos (angle);
+  result.x =          v.x*c + v.y*s;
+  result.y = v.x*s*-1 + v.y*c;
+  result.z = v.z;
+  return result;
+}
+
+ThreeJetVec RotateY(ThreeJetVec v, ThreeJet angle) {
+  ThreeJetVec result;
+  ThreeJet s, c;
+  s = Sin (angle);
+  c = Cos (angle);
+  result.x = v.x*c + v.z*s*-1;
+  result.y = v.y;
+  result.z = v.x*s + v.z*c    ;
+  return result;
+}
+
+ThreeJetVec RotateX(ThreeJetVec v, ThreeJet angle) {
+  ThreeJetVec result;
+  ThreeJet s,c;
+  s = Sin (angle);
+  c = Cos (angle);
+  result.x = v.x;
+  result.y = v.y*c + v.z*s;
+  result.z = v.y*s*-1 + v.z*c;
+  return result;
+}
+
+ThreeJetVec InterpolateVec(ThreeJetVec v1, ThreeJetVec v2, ThreeJet weight) {
+  return (v1) * (weight*-1 + 1) + v2*weight;
+}
+
+ThreeJet Length(ThreeJetVec v)
+{
+  return (v.x^2 + v.y^2) ^ (.5);
+}
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d2 1
+a2 1
+ThreeJetVec PlusVec(ThreeJetVec v, ThreeJetVec w) {
+d4 3
+a6 3
+  result.x = Plus(v.x, w.x);
+  result.y = Plus(v.y, w.y);
+  result.z = Plus(v.z, w.z);
+d10 1
+a10 1
+ThreeJetVec TimesVec(ThreeJetVec v, ThreeJet  a) {
+d12 3
+a14 3
+  result.x = Times(v.x, a);
+  result.y = Times(v.y, a);
+  result.z = Times(v.z, a);
+d18 1
+a18 1
+ThreeJetVec MultiplyVec(ThreeJetVec v, double a) {
+d20 3
+a22 3
+  result.x = Multiply(v.x, a);
+  result.y = Multiply(v.y, a);
+  result.z = Multiply(v.z, a);
+a25 8
+ThreeJetVec DVec(ThreeJetVec v, int index) {
+  ThreeJetVec result;
+  result.x = D(v.x, index);
+  result.y = D(v.y, index);
+  result.z = D(v.z, index);
+  return result;
+}
+
+d34 8
+d44 3
+a46 3
+  result.x = Plus(Times(v.y, w.z), Multiply(Times(v.z, w.y), -1));
+  result.y = Plus(Times(v.z, w.x), Multiply(Times(v.x, w.z), -1));
+  result.z = Plus(Times(v.x, w.y), Multiply(Times(v.y, w.x), -1));
+d51 1
+a51 1
+  return Plus(Plus(Times(v.x,w.x),Times(v.y,w.y)),Times(v.z,w.z));
+d58 1
+a58 1
+    a = Power(a, -0.5);
+d61 1
+a61 1
+  return TimesVec(v, a);
+d67 4
+a70 4
+  s = Sin(angle);
+  c = Cos(angle);
+  result.x = Plus(         Times(v.x, c),      Times(v.y, s));
+  result.y = Plus(Multiply(Times(v.x, s), -1), Times(v.y, c));
+d78 3
+a80 3
+  s = Sin(angle);
+  c = Cos(angle);
+  result.x = Plus(Times(v.x, c), Multiply(Times(v.z, s),-1));
+d82 1
+a82 1
+  result.z = Plus(Times(v.x, s),          Times(v.z, c)    );
+d89 2
+a90 2
+  s = Sin(angle);
+  c = Cos(angle);
+d92 2
+a93 2
+  result.y = Plus(Times(v.y, c), Times(v.z, s));
+  result.z = Plus(Multiply(Times(v.y, s), -1), Times(v.z, c));
+d98 1
+a98 1
+  return PlusVec(TimesVec(v1, Add(Multiply(weight,-1),1)),TimesVec(v2, weight));
+d103 1
+a103 1
+  return Power(Plus(Power(v.x,2), Power(v.y,2)),.5);
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d57 1
+a57 1
+  if (double(a) > 0)
+@

@@ -1,0 +1,135 @@
+head	2.1;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+2.1
+date	93.12.17.20.23.29;	author njt;	state Exp;
+branches;
+next	2.0;
+
+2.0
+date	93.02.21.22.50.39;	author njt;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	93.02.21.06.02.26;	author njt;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	93.02.21.01.43.12;	author njt;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+2.1
+log
+@These should be working
+@
+text
+@#include "figureeight.h"
+TwoJetVec FigureEight(
+  TwoJetVec w, TwoJetVec h, TwoJetVec bend, TwoJet form, TwoJet v
+) {
+  TwoJet height;
+  v %= 1;
+  height = (Cos (v*2) + -1) * (-1);
+  if (v > 0.25 && v < 0.75)
+    height = height*-1 + 4;
+  height = height*0.6;
+  h = h + bend*(height*height*(1/64.));
+  return 
+    w*Sin (v*2) + (h) * (Interpolate((Cos (v) + -1) * (-2), height, form))
+  ;
+}
+  
+TwoJetVec AddFigureEight(ThreeJetVec p, ThreeJet u, TwoJet v, ThreeJet form, ThreeJet scale)
+{
+  ThreeJet size = form*scale;
+  form = form*2 + form*form*-1;
+  TwoJetVec dv = AnnihilateVec(D(p, 1), 1);
+  p = AnnihilateVec(p, 1);
+  TwoJetVec du = Normalize(D(p, 0));
+  TwoJetVec h = Normalize(Cross(du, dv))*TwoJet(size);
+  TwoJetVec w = Normalize(Cross(h, du))*(TwoJet(size)*1.1);
+  return RotateZ(
+    TwoJetVec(p) +
+      FigureEight(w, h, du*D(size, 0)*(D(u, 0)^(-1)), form, v),
+    v*(1./N_STRIPS)
+  );
+}
+@
+
+
+2.0
+log
+@Working version
+@
+text
+@d6 1
+a6 1
+/*  v = v % 1;*/
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d2 2
+a3 3
+ThreeJetVec FigureEight(
+  ThreeJetVec w, ThreeJetVec h, ThreeJetVec bend,
+  ThreeJet form, ThreeJet v
+d5 1
+a5 1
+  ThreeJet height;
+d7 1
+a7 1
+  height = Multiply(Add(Cos(Multiply(v,2)),-1), -1);
+d9 6
+a14 7
+    height = Add(Multiply(height,-1),4);
+  height = Multiply(height, 0.6);
+  h = PlusVec(h, TimesVec(bend, Multiply(Times(height,height),1/64.)));
+  return PlusVec(
+    TimesVec(w, Sin(Multiply(v, 2))),
+    TimesVec(h, Interpolate(Multiply(Add(Cos(v),-1), -2), height, form))
+  );
+d17 1
+a17 1
+ThreeJetVec AddFigureEight(ThreeJetVec p, ThreeJet u, ThreeJet v, ThreeJet form, ThreeJet scale)
+d19 3
+a21 5
+  ThreeJet size;
+  ThreeJetVec dv, du, w, h;
+  size = Times(form, scale);
+  form = Plus(Multiply(form,2), Multiply(Times(form,form),-1));
+  dv = AnnihilateVec(DVec(p, 1),1);
+d23 3
+a25 3
+  du = Normalize(DVec(p, 0));
+  h = TimesVec(Normalize(Cross(du, dv)), size);
+  w = TimesVec(Normalize(Cross(h, du)), Multiply(size, 1.1));
+d27 3
+a29 2
+    PlusVec(p, FigureEight(w, h, TimesVec(du, Times(D(size,0), Power(D(u,0),-1))), form, v)),
+    Multiply(v,1./N_STRIPS)
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@

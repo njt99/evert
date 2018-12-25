@@ -1,0 +1,87 @@
+head	2.0;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+2.0
+date	93.02.21.22.50.39;	author njt;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	93.02.21.06.02.26;	author njt;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	93.02.21.01.43.12;	author njt;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+2.0
+log
+@Working version
+@
+text
+@#ifndef __THREEJETVEC
+#define __THREEJETVEC
+#include "threejet.h"
+#include "twojetvec.h"
+struct ThreeJetVec {
+  ThreeJet x;
+  ThreeJet y;
+  ThreeJet z;
+  operator TwoJetVec() { return TwoJetVec(x,y,z); }
+};
+
+ThreeJetVec operator+(ThreeJetVec v, ThreeJetVec w);
+ThreeJetVec operator*(ThreeJetVec v, ThreeJet  a);
+ThreeJetVec operator*(ThreeJetVec v, double a);
+ThreeJetVec AnnihilateVec(ThreeJetVec v, int index);
+ThreeJetVec Cross(ThreeJetVec v, ThreeJetVec w);
+ThreeJet Dot(ThreeJetVec v, ThreeJetVec w);
+TwoJetVec D(ThreeJetVec x, int index);
+ThreeJetVec Normalize(ThreeJetVec v);
+ThreeJetVec RotateZ(ThreeJetVec v, ThreeJet angle);
+ThreeJetVec RotateY(ThreeJetVec v, ThreeJet angle);
+ThreeJetVec RotateX(ThreeJetVec v, ThreeJet angle);
+ThreeJetVec InterpolateVec(ThreeJetVec v1, ThreeJetVec v2, ThreeJet weight);
+ThreeJet Length(ThreeJetVec v);
+#endif
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d4 2
+a5 1
+typedef struct ThreeJetVec {
+d9 2
+a10 1
+} ThreeJetVec;
+d12 3
+a14 4
+ThreeJetVec PlusVec(ThreeJetVec v, ThreeJetVec w);
+ThreeJetVec TimesVec(ThreeJetVec v, ThreeJet  a);
+ThreeJetVec MultiplyVec(ThreeJetVec v, double a);
+ThreeJetVec DVec(ThreeJetVec v, int index);
+d18 1
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@

@@ -1,0 +1,467 @@
+head	2.1;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+2.1
+date	93.12.17.20.23.29;	author njt;	state Exp;
+branches;
+next	2.0;
+
+2.0
+date	93.02.21.22.50.39;	author njt;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	93.02.21.06.02.26;	author njt;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	93.02.21.01.43.12;	author njt;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+2.1
+log
+@These should be working
+@
+text
+@#include "threejet.h"
+
+ThreeJet operator+(const ThreeJet x, const ThreeJet y) {
+  ThreeJet result;
+  result.f = x.f + y.f;
+  result.fu = x.fu + y.fu;
+  result.fv = x.fv + y.fv;
+  result.fuu = x.fuu + y.fuu;
+  result.fuv = x.fuv + y.fuv;
+  result.fvv = x.fvv + y.fvv;
+  result.fuuv = x.fuuv + y.fuuv;
+  result.fuvv = x.fuvv + y.fuvv;
+  return result;
+}
+
+ThreeJet operator*(const ThreeJet x, const ThreeJet y) {
+  ThreeJet result;
+  result.f = x.f*y.f;
+  result.fu = x.f*y.fu + x.fu*y.f;
+  result.fv = x.f*y.fv + x.fv*y.f;
+  result.fuu = x.f*y.fuu + 2*x.fu*y.fu + x.fuu*y.f;
+  result.fuv = x.f*y.fuv + x.fu*y.fv + x.fv*y.fu + x.fuv*y.f;
+  result.fvv = x.f*y.fvv + 2*x.fv*y.fv + x.fvv*y.f;
+  result.fuuv = x.f*y.fuuv + 2*x.fu*y.fuv + x.fv*y.fuu
+           + 2*x.fuv*y.fu + x.fuu*y.fv + x.fuuv*y.f;
+  result.fuvv = x.f*y.fuvv + 2*x.fv*y.fuv + x.fu*y.fvv
+           + 2*x.fuv*y.fv + x.fvv*y.fu + x.fuvv*y.f;
+  return result;
+}
+
+ThreeJet operator+(const ThreeJet x, double d) {
+  ThreeJet result;
+  result = x;
+  result.f += d;
+  return result;
+}
+
+ThreeJet operator*(const ThreeJet x, double d) {
+  ThreeJet result;
+  result.f = d*x.f;
+  result.fu = d*x.fu;
+  result.fv = d*x.fv;
+  result.fuu = d*x.fuu;
+  result.fuv = d*x.fuv;
+  result.fvv = d*x.fvv;
+  result.fuuv = d*x.fuuv;
+  result.fuvv = d*x.fuvv;
+  return result;
+}
+
+ThreeJet Sin(const ThreeJet x) {
+  ThreeJet result;
+  ThreeJet t = x*(2*M_PI);
+  double s = sin(t.f);
+  double c = cos(t.f);
+  result.f = s;
+  result.fu = c*t.fu;
+  result.fv = c*t.fv;
+  result.fuu = c*t.fuu - s*t.fu*t.fu;
+  result.fuv = c*t.fuv - s*t.fu*t.fv;
+  result.fvv = c*t.fvv - s*t.fv*t.fv;
+  result.fuuv = c*t.fuuv - s*(2*t.fu*t.fuv + t.fv*t.fuu) - c*t.fu*t.fu*t.fv;
+  result.fuvv = c*t.fuvv - s*(2*t.fv*t.fuv + t.fu*t.fvv) - c*t.fu*t.fv*t.fv;
+  return result;
+}
+
+ThreeJet Cos(const ThreeJet x) {
+  ThreeJet result;
+  ThreeJet t = x*(2*M_PI);
+  double s = cos(t.f);
+  double c = -sin(t.f);
+  result.f = s;
+  result.fu = c*t.fu;
+  result.fv = c*t.fv;
+  result.fuu = c*t.fuu - s*t.fu*t.fu;
+  result.fuv = c*t.fuv - s*t.fu*t.fv;
+  result.fvv = c*t.fvv - s*t.fv*t.fv;
+  result.fuuv = c*t.fuuv - s*(2*t.fu*t.fuv + t.fv*t.fuu) - c*t.fu*t.fu*t.fv;
+  result.fuvv = c*t.fuvv - s*(2*t.fv*t.fuv + t.fu*t.fvv) - c*t.fu*t.fv*t.fv;
+  return result;
+}
+
+ThreeJet operator^(const ThreeJet x, double n) {
+  double x0 = pow(x.f, n);
+  double x1 = (x.f == 0) ? 0 : n * x0/x.f;
+  double x2 = (x.f == 0) ? 0 : (n-1) * x1/x.f;
+  double x3 = (x.f == 0) ? 0 : (n-2) * x2/x.f;
+  ThreeJet result;
+  result.f = x0;
+  result.fu = x1*x.fu;
+  result.fv = x1*x.fv;
+  result.fuu = x1*x.fuu + x2*x.fu*x.fu;
+  result.fuv = x1*x.fuv + x2*x.fu*x.fv;
+  result.fvv = x1*x.fvv + x2*x.fv*x.fv;
+  result.fuuv = x1*x.fuuv + x2*(2*x.fu*x.fuv + x.fv*x.fuu) + x3*x.fu*x.fu*x.fv;
+  result.fuvv = x1*x.fuvv + x2*(2*x.fv*x.fuv + x.fu*x.fvv) + x3*x.fu*x.fv*x.fv;
+  return result;
+}
+
+TwoJet D(const ThreeJet x, int index) {
+  TwoJet result;
+  if (index == 0) {
+    result.f = x.fu;
+    result.fu = x.fuu;
+    result.fv = x.fuv;
+    result.fuv = x.fuuv;
+  } else if (index == 1) {
+    result.f = x.fv;
+    result.fu = x.fuv;
+    result.fv = x.fvv;
+    result.fuv = x.fuvv;
+  } else {
+    result.f = result.fu = result.fv =
+    result.fuv = 0;
+  }
+  return result;
+}
+
+ThreeJet Annihilate(const ThreeJet x, int index) {
+  ThreeJet result = ThreeJet(x.f,0,0);
+  if (index == 0) {
+    result.fv = x.fv;
+    result.fvv = x.fvv;
+  } else if (index == 1) {
+    result.fu = x.fu;
+    result.fuu = x.fuu;
+  }
+  return result;
+}
+
+ThreeJet Interpolate(const ThreeJet v1, const ThreeJet v2, const ThreeJet weight) {
+  return (v1) * ((weight) * (-1) + 1) + v2*weight;
+}
+
+void printJet(const ThreeJet v) {
+ printf("%f (%f %f)\n",
+  v.f,
+  v.fu, v.fv
+ );
+}
+@
+
+
+2.0
+log
+@Working version
+@
+text
+@a10 1
+  result.fuuu = x.fuuu + y.fuuu;
+a12 1
+  result.fvvv = x.fvvv + y.fvvv;
+a23 1
+  result.fuuu = x.f*y.fuuu + 3*x.fu*y.fuu + 3*x.fuu*y.fu + x.fuuu*y.f;
+a27 1
+  result.fvvv = x.f*y.fvvv + 3*x.fv*y.fvv + 3*x.fvv*y.fv + x.fvvv*y.f;
+a45 1
+  result.fuuu = d*x.fuuu;
+a47 1
+  result.fvvv = d*x.fvvv;
+a61 1
+  result.fuuu = c*t.fuuu - s*(3*t.fu*t.fuu) - c*t.fu*t.fu*t.fu;
+a63 1
+  result.fvvv = c*t.fvvv - s*(3*t.fv*t.fvv) - c*t.fv*t.fv*t.fv;
+a77 1
+  result.fuuu = c*t.fuuu - s*(3*t.fu*t.fuu) - c*t.fu*t.fu*t.fu;
+a79 1
+  result.fvvv = c*t.fvvv - s*(3*t.fv*t.fvv) - c*t.fv*t.fv*t.fv;
+d85 3
+a87 3
+  double x1 = n * pow(x.f, n-1);
+  double x2 = (n == 1) ? 0 : n * (n-1) * pow(x.f, n-2);
+  double x3 = (n == 1 || n == 2) ? 0 : n * (n-1) * (n-2) * pow(x.f, n-3); 
+a94 1
+  result.fuuu = x1*x.fuuu + x2*(3*x.fu*x.fuu) + x3*x.fu*x.fu*x.fu;
+a96 1
+  result.fvvv = x1*x.fvvv + x2*(3*x.fv*x.fvv) + x3*x.fv*x.fv*x.fv;
+a105 1
+    result.fuu = x.fuuu;
+a106 1
+    result.fvv = x.fuvv;
+a110 1
+    result.fuu = x.fuuv;
+a111 1
+    result.fvv = x.fvvv;
+d114 1
+a114 1
+    result.fuu = result.fuv = result.fvv = 0./0.;
+a123 1
+    result.fvvv = x.fvvv;
+a126 1
+    result.fuuu = x.fuuu;
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d3 1
+a3 1
+ThreeJet Plus(const ThreeJet x, const ThreeJet y) {
+d18 1
+a18 1
+ThreeJet Times(const ThreeJet x, const ThreeJet y) {
+d35 1
+a35 1
+ThreeJet Add(const ThreeJet x, double d) {
+d42 1
+a42 1
+ThreeJet Multiply(const ThreeJet x, double d) {
+d59 1
+a59 1
+  ThreeJet t = Multiply(x, 2*M_PI);
+d77 1
+a77 1
+  ThreeJet t = Multiply(x, 2*M_PI);
+d93 1
+a93 1
+ThreeJet Power(const ThreeJet x, double n) {
+d112 2
+a113 2
+ThreeJet D(const ThreeJet x, int index) {
+  ThreeJet result;
+a131 1
+  result.fuuu = result.fuuv = result.fuvv = result.fvvv = 0;
+d150 1
+a150 1
+  return Plus(Times(v1, Add(Multiply(weight,-1),1)),Times(v2, weight));
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d3 1
+a3 1
+ThreeJet Plus(const ThreeJet& x, const ThreeJet& y) {
+a4 1
+  int i, j, k;
+d6 9
+a14 9
+  for (i = 0; i < DIM; i++)
+    result.df[i] = x.df[i] + y.df[i];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] = x.d2f[i][j] + y.d2f[i][j];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++)
+	result.d3f[i][j][k] = x.d3f[i][j][k] + y.d3f[i][j][k];
+d18 14
+a31 25
+ThreeJet Times(const ThreeJet& x, const ThreeJet& y) {
+  int i, j, k;
+  ThreeJet result;
+  result.f = x.f * y.f;
+  for (i = 0; i < DIM; i++)
+    result.df[i] = x.f * y.df[i] + x.df[i] * y.f;
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] =
+        x.f * y.d2f[i][j]
+      + x.df[i] * y.df[j]
+      + x.df[j] * y.df[i]
+      + x.d2f[i][j] * y.f;
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++)
+	result.d3f[i][j][k] = 
+	  x.f * y.d3f[i][j][k]
+	+ x.df[i] * y.d2f[j][k]
+	+ x.df[j] * y.d2f[i][k]
+	+ x.df[k] * y.d2f[i][j]
+	+ x.d2f[i][j] * y.df[k]
+	+ x.d2f[i][k] * y.df[j]
+	+ x.d2f[j][k] * y.df[i]
+	+ x.d3f[i][j][k] * y.f;
+d35 1
+a35 1
+ThreeJet Add(const ThreeJet& x, double d) {
+d42 1
+a42 1
+ThreeJet Multiply(const ThreeJet& x, double d) {
+a43 1
+  int i,j,k;
+d45 9
+a53 9
+  for (i = 0; i < DIM; i++)
+    result.df[i] = d*x.df[i];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] = d*x.d2f[i][j];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++)
+	result.d3f[i][j][k] = d*x.d3f[i][j][k];
+d57 1
+a57 1
+ThreeJet Sin(const ThreeJet& x) {
+a58 1
+  int i, j, k;
+d60 13
+a72 19
+  result.f = sin(t.f);
+  for (i = 0; i < DIM; i++)
+    result.df[i] = cos(t.f) * t.df[i];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] =
+        cos(t.f) * t.d2f[i][j]
+      - sin(t.f) * t.df[i]*t.df[j];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++)
+        result.d3f[i][j][k] =
+	  cos(t.f) * t.d3f[i][j][k]
+	- sin(t.f) * (
+	    t.d2f[i][j]*t.df[k]
+	  + t.d2f[i][k]*t.df[j]
+	  + t.d2f[j][k]*t.df[i])
+	- cos(t.f) * t.df[i] * t.df[j] * t.df[k];
+   return result;
+d75 1
+a75 1
+ThreeJet Cos(const ThreeJet& x) {
+a76 1
+  int i, j, k;
+d78 69
+a146 79
+  result.f = cos(t.f);
+  for (i = 0; i < DIM; i++)
+    result.df[i] = -sin(t.f) * t.df[i];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] =
+      - sin(t.f) * t.d2f[i][j]
+      - cos(t.f) * t.df[i]*t.df[j];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++)
+        result.d3f[i][j][k] =
+	- sin(t.f) * t.d3f[i][j][k]
+	- cos(t.f) * (
+	    t.d2f[i][j]*t.df[k]
+	  + t.d2f[i][k]*t.df[j]
+	  + t.d2f[j][k]*t.df[i])
+	+ sin(t.f) * t.df[i] * t.df[j] * t.df[k];
+   return result;
+}
+
+/* assumes n != 1, n != 2 */
+ThreeJet Power(const ThreeJet& x, double n) {
+  ThreeJet result;
+  int i, j, k;
+  result.f = pow(x.f, n);
+  for (i = 0; i < DIM; i++)
+    result.df[i] = n * pow(x.f, n-1) * x.df[i];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] =
+        n * (n-1) * pow(x.f, n-2) * x.df[i] * x.df[j]
+         + n * pow(x.f, n-1) * x.d2f[i][j];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++) {
+        result.d3f[i][j][k] =
+	  n * (n-1) * pow(x.f, n-2) * 
+	   (x.df[i] * x.d2f[j][k]
+	  + x.df[j] * x.d2f[i][k]
+	  + x.df[k] * x.d2f[i][j])
+	+ n * pow(x.f, n-1) * x.d3f[i][j][k];
+	if (n != 2)
+	  result.d3f[i][j][k] +=
+	    n * (n-1) * (n-2) * pow(x.f,n-3) * x.df[i] * x.df[j] * x.df[k];
+      }
+  return result;
+}
+
+ThreeJet D(const ThreeJet& x, int index) {
+  ThreeJet result;
+  int i, j, k;
+  result.f = x.df[index];
+  for (i = 0; i < DIM; i++)
+    result.df[i] = x.d2f[i][index];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] = x.d3f[i][j][index];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++)
+        result.d3f[i][j][k] = 0;
+  return result;
+}
+
+ThreeJet Annihilate(const ThreeJet& x, int index) {
+  ThreeJet result;
+  int i, j, k;
+  result.f = x.f;
+  for (i = 0; i < DIM; i++)
+    result.df[i] = (i == index) ? 0 : x.df[i];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      result.d2f[i][j] = (i == index || j == index) ? 0 : x.d2f[i][j];
+  for (i = 0; i < DIM; i++)
+    for (j = 0; j < DIM; j++)
+      for (k = 0; k < DIM; k++)
+	result.d3f[i][j][k] =
+	  (i == index || j == index || k == index) ? 0 : x.d3f[i][j][k];
+d150 1
+a150 1
+ThreeJet Interpolate(const ThreeJet& v1, const ThreeJet& v2, const ThreeJet& weight) {
+d154 1
+a154 9
+ThreeJet::ThreeJet() {
+ f = 0;
+ df[0] = df[1] = 0;
+ d2f[0][0] = d2f[0][1] = d2f[1][0] = d2f[1][1] = 0;
+ d3f[0][0][0] = d3f[0][0][1] = d3f[0][1][0] = d3f[0][1][1] = 0;
+ d3f[1][0][0] = d3f[1][0][1] = d3f[1][1][0] = d3f[1][1][1] = 0;
+}
+
+void printJet(const ThreeJet& v) {
+d157 1
+a157 1
+  v.df[0], v.df[1]
+@

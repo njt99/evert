@@ -1,0 +1,98 @@
+head	2.1;
+access;
+symbols;
+locks; strict;
+comment	@ * @;
+
+
+2.1
+date	93.12.17.20.23.29;	author njt;	state Exp;
+branches;
+next	2.0;
+
+2.0
+date	93.02.21.22.50.39;	author njt;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	93.02.21.06.02.26;	author njt;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	93.02.21.01.43.12;	author njt;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+2.1
+log
+@These should be working
+@
+text
+@#ifndef __SPLINE
+#define __SPLINE
+#include "threejetvec.h"
+#include "twojetvec.h"
+
+typedef TwoJetVec SurfaceTimeFunction(ThreeJet u, ThreeJet v, double t);
+
+void print_point (FILE *fp, TwoJetVec p, double ps, double pus, double pvs, double puvs);
+void printSpline(FILE *fp, TwoJetVec v00, TwoJetVec v01, TwoJetVec v10, TwoJetVec v11, double us, double vs, double s0,double s1,double t0,double t1);
+void printScene(
+  SurfaceTimeFunction *func,
+  double umin, double umax, double du,
+  double vmin, double vmax, double dv,
+  double t, int binary
+);        
+void impossible(char *msg);
+#endif
+@
+
+
+2.0
+log
+@Working version
+@
+text
+@d8 2
+a9 2
+void print_point (FILE *fp, TwoJetVec p, int ps, int pus, int pvs, int puvs);
+void printSpline(FILE *fp, TwoJetVec v00, TwoJetVec v01, TwoJetVec v10, TwoJetVec v11, double s0,double ds,double t0,double dt);
+d12 2
+a13 2
+  double umin, double umax, int jmax,
+  double vmin, double vmax, int kmax,
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d4 1
+d6 1
+a6 1
+typedef ThreeJetVec SurfaceTimeFunction(ThreeJet u, ThreeJet v, ThreeJet t);
+d8 2
+a9 2
+void print_point (FILE *fp, ThreeJetVec p, int ps, int pus, int pvs, int puvs);
+void printSpline(FILE *fp, ThreeJetVec v00, ThreeJetVec v01, ThreeJetVec v10, ThreeJetVec v11, double s0,double ds,double t0,double dt);
+d14 1
+a14 1
+  double t		 
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@
